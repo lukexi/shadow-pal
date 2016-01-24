@@ -15,6 +15,8 @@ data Uniforms = Uniforms
     , uShadowMap     :: UniformLocation GLint
     } deriving Data
 
+shadowRes :: GLsizei
+shadowRes = 4096
 
 main :: IO ()
 main = do
@@ -27,7 +29,7 @@ main = do
     -- fix: needless duplication of geo here
     shadowShapes <- makeShapes shadowShader
 
-    (shadowMapFramebuffer, shadowMapTexture) <- createFramebuffer' 1024 1024
+    (shadowMapFramebuffer, shadowMapTexture) <- createFramebuffer' shadowRes shadowRes
     
     glEnable GL_DEPTH_TEST
     glClearColor 0.0 0.0 0.1 1
@@ -36,13 +38,13 @@ main = do
     void . flip runStateT initialPose . whileWindow win $ do
         processEvents events $ \e -> do
             closeOnEscape win e
-        -- applyMouseLook win id
+        applyMouseLook win id
         applyWASD win id
 
         t <- getNow
         
 
-        glViewport 0 0 1024 1024
+        glViewport 0 0 shadowRes shadowRes
         renderShadowMap shadowMapFramebuffer shadowShapes t
         
         pose <- use id
@@ -184,6 +186,11 @@ makeShapes shader = do
                     , V4 0.5 0.3 1 1
                     , \t -> mkTransformation 
                         (axisAngle (V3 1 1 0) t) (V3 (-1) 1 0)
+                    )
+                 ,  ( cubeShape
+                    , V4 0.9 0.2 0.4 1
+                    , \t -> mkTransformation 
+                        (axisAngle (V3 1 0 1) (t/3)) (V3 1 2 2)
                     )
                  ,  ( icoShape 
                     , V4 0.2 0.3 0.4 1

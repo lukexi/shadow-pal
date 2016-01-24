@@ -16,6 +16,12 @@ const   float ambient = 0.2;
 float n2rand( vec2 n );
 
 float calculateShadows() {
+
+    float bias = 0.005;
+
+    // TODO
+    // float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);  
+    
     // Shadowing
     vec3 shadowCoord = vPositionLightSpace.xyz / vPositionLightSpace.w;
     // shadowCoord = shadowCoord * 0.5 + 0.5;
@@ -23,7 +29,7 @@ float calculateShadows() {
     float closestDepth = texture(uShadowMap, shadowCoord.xy).r;
     float currentDepth = vPositionLightSpace.z;
 
-    float shadow = currentDepth > closestDepth  ? 0.5 : 1.0;
+    float shadow = currentDepth - bias > closestDepth  ? 0.5 : 1.0;
     
     return shadow;
 }
@@ -34,7 +40,7 @@ void main() {
     float visibility = calculateShadows();
 
 
-    vec3 lightPosition = vec3(0,1,1);
+    vec3 lightPosition = vec3(0,2,1);
     vec4 color = uDiffuse;
 
 
