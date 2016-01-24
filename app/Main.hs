@@ -8,11 +8,11 @@ import Control.Monad.Reader
 import Control.Monad.State
 
 data Uniforms = Uniforms 
-    { uMVP          :: UniformLocation (M44 GLfloat) 
-    , uModel        :: UniformLocation (M44 GLfloat) 
-    , uDepthBiasMVP :: UniformLocation (M44 GLfloat) 
-    , uDiffuse      :: UniformLocation (V4 GLfloat) 
-    , uShadowMap    :: UniformLocation GLint
+    { uMVP           :: UniformLocation (M44 GLfloat) 
+    , uModel         :: UniformLocation (M44 GLfloat) 
+    , uLightSpaceMVP :: UniformLocation (M44 GLfloat) 
+    , uDiffuse       :: UniformLocation (V4 GLfloat) 
+    , uShadowMap     :: UniformLocation GLint
     } deriving Data
 
 
@@ -41,13 +41,16 @@ main = do
 
         t <- getNow
         
+
+        glViewport 0 0 1024 1024
+        renderShadowMap shadowMapFramebuffer shadowShapes t
+        
         pose <- use id
         projM44 <- getWindowProjection win 45 0.1 1000
         let viewM44 = viewMatrixFromPose pose
         (x,y,w,h) <- getWindowViewport win
         glViewport x y w h
         
-        renderShadowMap shadowMapFramebuffer shadowShapes t
 
         
         glActiveTexture GL_TEXTURE0
@@ -58,14 +61,15 @@ main = do
         swapBuffers win
 
 shadowProjView :: M44 GLfloat
-shadowProjView = depthProjM44 !*! depthViewM44
+shadowProjView = depthProjM44 !*! depthViewM44 
+        !*! mkTransformation (axisAngle (V3 0 1 0) 0) (V3 0 0 0)
     where 
         lightInvDir = V3 0.5 2 2
         depthProjM44 = ortho (-10) 10 (-10) 10 (-10) 20
         depthViewM44 = lookAt lightInvDir (V3 0 0 0) (V3 0 1 0)
 
 biasMatrix :: M44 GLfloat
-biasMatrix = 
+biasMatrix = transpose $
     V4 (V4 0.5 0.0 0.0 0.0)
        (V4 0.0 0.5 0.0 0.0)
        (V4 0.0 0.0 0.5 0.0)
@@ -92,7 +96,7 @@ renderScene projViewM44 shapes t = do
             Uniforms{..} <- asks sUniforms
             let modelM44 = makeTransform t
             uniformM44 uMVP (projViewM44 !*! modelM44)
-            uniformM44 uDepthBiasMVP (biasMatrix !*! shadowProjView)
+            uniformM44 uLightSpaceMVP (biasMatrix !*! shadowProjView)
             uniformM44 uModel modelM44
             uniformV4  uDiffuse color
             uniformI   uShadowMap 0
@@ -173,7 +177,7 @@ makeShapes shader = do
     cubeGeo    <- cubeGeometry 1 5
     cubeShape  <- (makeShape cubeGeo shader :: IO (Shape Uniforms))
     
-    planeGeo   <- planeGeometry 10 (V3 0 0 1) (V3 0 1 0) 1
+    planeGeo   <- planeGeometry 100 (V3 0 0 1) (V3 0 1 0) 1
     planeShape <- makeShape planeGeo shader
   
     let shapes = [  ( cubeShape

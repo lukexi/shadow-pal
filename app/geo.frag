@@ -7,7 +7,7 @@ in      vec3 vPosition;
 in      vec3 vNormal;
 in      vec2 vUV;
 
-in      vec3 vShadowCoord;
+in      vec4 vPositionLightSpace;
 
 out     vec4 fragColor;
 
@@ -15,14 +15,23 @@ const   vec3 lightColor = vec3(1);
 const   float ambient = 0.2;
 float n2rand( vec2 n );
 
+float calculateShadows() {
+    // Shadowing
+    vec3 shadowCoord = vPositionLightSpace.xyz / vPositionLightSpace.w;
+    // shadowCoord = shadowCoord * 0.5 + 0.5;
+
+    float closestDepth = texture(uShadowMap, shadowCoord.xy).r;
+    float currentDepth = vPositionLightSpace.z;
+
+    float shadow = currentDepth > closestDepth  ? 0.5 : 1.0;
+    
+    return shadow;
+}
+
 void main() {
 
 
-    // Shadowing
-    float visibility = 1.0;
-    if (texture(uShadowMap, vShadowCoord.xy).z < vShadowCoord.z) {
-        visibility = 0.5;
-    }
+    float visibility = calculateShadows();
 
 
     vec3 lightPosition = vec3(0,1,1);
@@ -51,7 +60,8 @@ void main() {
     
     fragColor = vec4(final, uDiffuse.a);
 
-    fragColor = texture(uShadowMap, vUV);
+    // fragColor = texture(uShadowMap, vPositionLightSpace.xy);
+    // fragColor = texture(uShadowMap, vUV);
 }
 
 
