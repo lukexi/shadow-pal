@@ -5,4 +5,7 @@ packages:
 - '../glfw-pal'
 - '../gl-pal'
 - '../halive'
+- '../vr-pal'
+- '../lens-extra'
+- '../openvr-hs'
 resolver: nightly-2016-01-10
