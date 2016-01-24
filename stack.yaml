@@ -1,0 +1,8 @@
+flags: {}
+packages:
+- '.'
+- '../linear-extra'
+- '../glfw-pal'
+- '../gl-pal'
+- '../halive'
+resolver: nightly-2016-01-10
