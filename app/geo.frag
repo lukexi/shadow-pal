@@ -17,7 +17,7 @@ float n2rand( vec2 n );
 
 float calculateShadows() {
 
-    float bias = 0.005;
+    float bias = 0.0005;
 
     // TODO
     // float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);  
@@ -30,7 +30,11 @@ float calculateShadows() {
     float currentDepth = vPositionLightSpace.z;
 
     float shadow = currentDepth - bias > closestDepth  ? 0.5 : 1.0;
-    
+        
+    if(shadowCoord.z > 1.0) {
+        shadow = 1.0;
+    }
+
     return shadow;
 }
 
@@ -40,7 +44,7 @@ void main() {
     float visibility = calculateShadows();
 
 
-    vec3 lightPosition = vec3(0,2,1);
+    vec3 lightPosition = vec3(0,8,1);
     vec4 color = uDiffuse;
 
 

@@ -6,7 +6,7 @@ import Control.Lens
 import Halive.Utils
 import Control.Monad.Reader
 import Control.Monad.State
-
+import Foreign.Marshal.Array
 data Uniforms = Uniforms 
     { uMVP           :: UniformLocation (M44 GLfloat) 
     , uModel         :: UniformLocation (M44 GLfloat) 
@@ -33,6 +33,8 @@ main = do
     
     glEnable GL_DEPTH_TEST
     glClearColor 0.0 0.0 0.1 1
+
+    glEnable GL_CULL_FACE
     
     let initialPose = newPose & posPosition .~ (V3 0 1 5)
     void . flip runStateT initialPose . whileWindow win $ do
@@ -43,10 +45,11 @@ main = do
 
         t <- getNow
         
-
+        glCullFace GL_FRONT
         glViewport 0 0 shadowRes shadowRes
         renderShadowMap shadowMapFramebuffer shadowShapes t
-        
+        glCullFace GL_BACK
+
         pose <- use id
         projM44 <- getWindowProjection win 45 0.1 1000
         let viewM44 = viewMatrixFromPose pose
@@ -123,6 +126,9 @@ createTexture (sizeX, sizeY) texFormat filterType clampType = do
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_S clampType
     glTexParameteri GL_TEXTURE_2D GL_TEXTURE_WRAP_T clampType
     glTexStorage2D  GL_TEXTURE_2D 1 texFormat sizeX sizeY
+    
+    withArray [1,1,1,1] $ 
+        glTexParameterfv GL_TEXTURE_2D GL_TEXTURE_BORDER_COLOR
 
     glBindTexture   GL_TEXTURE_2D 0
     
@@ -134,7 +140,7 @@ bindTexture2D (TextureID texID) = glBindTexture GL_TEXTURE_2D texID
 createFramebuffer' :: GLsizei -> GLsizei -> IO (Framebuffer, TextureID)
 createFramebuffer' sizeX sizeY = do
     framebufferTexture <- createTexture (sizeX, sizeY) 
-        GL_DEPTH_COMPONENT32F GL_NEAREST GL_CLAMP_TO_EDGE
+        GL_DEPTH_COMPONENT32F GL_NEAREST GL_CLAMP_TO_BORDER
   
     framebuffer <- overPtr (glGenFramebuffers 1)
   
@@ -173,7 +179,7 @@ createFramebuffer' sizeX sizeY = do
 
 makeShapes :: Program -> IO [(Shape Uniforms, V4 GLfloat, GLfloat -> M44 GLfloat)]
 makeShapes shader = do
-    icoGeo     <- icosahedronGeometry 0.5 5
+    icoGeo     <- icosahedronGeometry 1 5
     icoShape   <- makeShape icoGeo shader
   
     cubeGeo    <- cubeGeometry 1 5
@@ -185,15 +191,15 @@ makeShapes shader = do
     let shapes = [  ( cubeShape
                     , V4 0.5 0.3 1 1
                     , \t -> mkTransformation 
-                        (axisAngle (V3 1 1 0) t) (V3 (-1) 1 0)
+                        (axisAngle (V3 1 1 0) t) (V3 (-1) 2 0)
                     )
                  ,  ( cubeShape
                     , V4 0.9 0.2 0.4 1
                     , \t -> mkTransformation 
-                        (axisAngle (V3 1 0 1) (t/3)) (V3 1 2 2)
+                        (axisAngle (V3 1 0 1) (t/3)) (V3 2 3 2)
                     )
                  ,  ( icoShape 
-                    , V4 0.2 0.3 0.4 1
+                    , V4 0.8 0.8 0.4 1
                     , \t -> mkTransformation 
                         (axisAngle (V3 1 1 0) t) (V3 1 1 0)
                     )
